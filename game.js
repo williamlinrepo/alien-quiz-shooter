@@ -431,6 +431,7 @@ scene("shooter", ({ upgrades }) => {
         shotsHit++;
         destroy(a);
       });
+      every("hpBar", destroy);
       updateScore();
     }
   });
@@ -531,12 +532,12 @@ scene("shooter", ({ upgrades }) => {
         rect(cfg.w, 6),
         pos(alien.pos.x - cfg.w / 2, alien.pos.y - cfg.h / 2 - 8),
         color(80, 220, 80),
-        { maxW: cfg.w, maxHp: cfg.hp },
+        "hpBar",
+        { maxW: cfg.w, maxHp: cfg.hp, alien: alien },
       ]);
     }
 
-    onUpdate(() => {
-      if (!alien.exists()) return;
+    alien.onUpdate(() => {
       zigzagTime += dt();
       const zigX = cfg.zigzag ? Math.sin(zigzagTime * 4) * 120 * dt() : 0;
       alien.pos.x += zigX;
@@ -548,11 +549,14 @@ scene("shooter", ({ upgrades }) => {
         hpBar.width = (alien.hp / hpBar.maxHp) * hpBar.maxW;
       }
 
-      if (alien.pos.y > height() + 60) destroy(alien);
+      if (alien.pos.y > height() + 60) {
+        if (hpBar && hpBar.exists()) destroy(hpBar);
+        destroy(alien);
+      }
     });
 
     if (cfg.fires) {
-      loop(2.5, () => {
+      const fireLoop = loop(2.5, () => {
         if (!alien.exists()) return;
         add([
           circle(6),
@@ -564,6 +568,8 @@ scene("shooter", ({ upgrades }) => {
           "enemyBullet",
         ]);
       });
+
+      alien.onDestroy(() => fireLoop.cancel());
     }
   }
 
@@ -579,6 +585,9 @@ scene("shooter", ({ upgrades }) => {
       score += Math.round(alien.points * scoreMultiplier);
       updateScore();
       addExplosion(alien.pos);
+      every("hpBar", (bar) => {
+        if (bar.alien === alien) destroy(bar);
+      });
       destroy(alien);
     }
   });
