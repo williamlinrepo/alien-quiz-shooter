@@ -142,7 +142,7 @@ function upgradeName(qNum) {
   const names = {
     1: "1 Life", 2: "1 Life", 3: "1 Life",
     4: "Shield (2 hits)", 5: "Shield +1 hit",
-    6: "Spread Shot", 7: "Laser",
+    6: "Spread Shot", 7: "Piercing Laser",
     8: "Smart Bomb", 9: "+1 Smart Bomb",
     10: "1.5× Score",
   };
@@ -409,16 +409,31 @@ function spawnBullets(origin, weapon) {
 
 function spawnBullet(origin, dir, isLaser = false) {
   play("shoot", { volume: 0.3 });
-  add([
-    sprite("bullet"),
-    pos(origin),
-    anchor("center"),
-    area(),
-    move(dir, isLaser ? 700 : 500),
-    offscreen({ destroy: true }),
-    "bullet",
-    { damage: isLaser ? 2 : 1 },
-  ]);
+  if (isLaser) {
+    // Laser: tall bright cyan beam that pierces through all aliens
+    add([
+      rect(5, 36),
+      pos(origin),
+      anchor("center"),
+      color(80, 255, 255),
+      area(),
+      move(dir, 700),
+      offscreen({ destroy: true }),
+      "bullet",
+      { damage: 1, piercing: true },
+    ]);
+  } else {
+    add([
+      sprite("bullet"),
+      pos(origin),
+      anchor("center"),
+      area(),
+      move(dir, 500),
+      offscreen({ destroy: true }),
+      "bullet",
+      { damage: 1, piercing: false },
+    ]);
+  }
 }
 
 function addExplosion(p) {
@@ -703,7 +718,7 @@ scene("shooter", ({ upgrades, pack, level, score: prevScore = 0 }) => {
     shotsHit++;
     addExplosion(bullet.pos);
     play("hit", { volume: 0.5 });
-    destroy(bullet);
+    if (!bullet.piercing) destroy(bullet);
     if (alien.hp <= 0) {
       score += Math.round(alien.points * scoreMultiplier);
       updateScore();
@@ -1172,7 +1187,7 @@ scene("boss", ({ upgrades, pack, level, score: prevScore = 0 }) => {
     shotsHit++;
     addExplosion(bullet.pos);
     play("hit", { volume: 0.4 });
-    destroy(bullet);
+    if (!bullet.piercing) destroy(bullet);
     updateBossBar();
 
     if (bossHp <= 0 && !bossDefeated) {
