@@ -142,9 +142,8 @@ scene("quiz", ({ pack, questionIndex, upgrades, level }) => {
   const targetDiff = level <= 1 ? "easy" : level === 2 ? "medium" : "hard";
   const filtered = pack.questions.filter(q => q.difficulty === targetDiff);
   // Pad with adjacent difficulty if not enough
-  const pool = filtered.length >= 10 ? filtered :
-    [...filtered, ...pack.questions.filter(q => q.difficulty !== targetDiff)]
-      .slice(0, 10);
+  const pool = [...filtered, ...pack.questions.filter(q => q.difficulty !== targetDiff)]
+    .slice(0, 10);
   // Use pool instead of pack.questions
   const questions = pool;
   const qNum = questionIndex + 1; // 1-based
