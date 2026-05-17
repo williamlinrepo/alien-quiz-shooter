@@ -69,7 +69,7 @@ scene("title", (packs) => {
   ]);
 
   add([
-    text("10 questions per level  |  Each correct answer = 1 upgrade  |  Upgrades reset every level", { size: 13, width: 680 }),
+    text("10 questions  |  Every correct answer unlocks the next upgrade  |  Resets each level", { size: 13, width: 680 }),
     pos(width() / 2, 148),
     anchor("center"),
     color(140, 140, 180),
@@ -142,7 +142,7 @@ function upgradeName(qNum) {
   const names = {
     1: "1 Life", 2: "1 Life", 3: "1 Life",
     4: "Shield (2 hits)", 5: "Shield +1 hit",
-    6: "Spread Shot", 7: "Laser",
+    6: "Spread Shot", 7: "Piercing Laser",
     8: "Smart Bomb", 9: "+1 Smart Bomb",
     10: "1.5× Score",
   };
@@ -151,7 +151,7 @@ function upgradeName(qNum) {
 
 const QUESTION_TIME = 8; // seconds per question
 
-scene("quiz", ({ pack, questionIndex, upgrades, level, score = 0, results = [] }) => {
+scene("quiz", ({ pack, questionIndex, upgrades, level, score = 0, results = [], correctCount = 0 }) => {
   // Filter questions by difficulty based on level
   const targetDiff = level <= 1 ? "easy" : level === 2 ? "medium" : "hard";
   const filtered = pack.questions.filter(q => q.difficulty === targetDiff);
@@ -159,9 +159,8 @@ scene("quiz", ({ pack, questionIndex, upgrades, level, score = 0, results = [] }
   const pool = [...filtered, ...pack.questions.filter(q => q.difficulty !== targetDiff)]
     .sort(() => Math.random() - 0.5)
     .slice(0, 10);
-  // Use pool instead of pack.questions
   const questions = pool;
-  const qNum = questionIndex + 1; // 1-based
+  const qNum = questionIndex + 1; // 1-based for display only
   const q = questions[questionIndex];
 
   // Question number label
@@ -171,12 +170,13 @@ scene("quiz", ({ pack, questionIndex, upgrades, level, score = 0, results = [] }
     color(180, 180, 180),
   ]);
 
-  // Show what this question is worth
+  // Show what the next correct answer earns
+  const nextReward = correctCount < 10 ? upgradeName(correctCount + 1) : null;
   add([
-    text(`Correct = +${upgradeName(qNum)}`, { size: 15 }),
+    text(nextReward ? `Next correct = +${nextReward}` : "All upgrades earned!", { size: 15 }),
     pos(width() - 10, 16),
     anchor("right"),
-    color(80, 220, 130),
+    color(nextReward ? [80, 220, 130] : [255, 200, 0]),
   ]);
 
   // Question text
@@ -222,13 +222,14 @@ scene("quiz", ({ pack, questionIndex, upgrades, level, score = 0, results = [] }
       if (answered) return;
       answered = true;
       const correct = i === q.answer;
-      const newUpgrades = correct ? applyUpgrade(upgrades, qNum) : upgrades;
+      const newCorrectCount = correct ? correctCount + 1 : correctCount;
+      const newUpgrades = correct ? applyUpgrade(upgrades, newCorrectCount) : upgrades;
 
       btn.color = correct ? rgb(50, 220, 50) : rgb(220, 50, 50);
       play(correct ? "correct" : "wrong", { volume: 0.6 });
 
       add([
-        text(correct ? "CORRECT! +" + upgradeName(qNum) : "Wrong!", { size: 28 }),
+        text(correct ? "CORRECT! +" + upgradeName(newCorrectCount) : "Wrong!", { size: 28 }),
         pos(width() / 2, 480),
         anchor("center"),
         color(correct ? 50 : 220, correct ? 220 : 50, 50),
@@ -239,7 +240,7 @@ scene("quiz", ({ pack, questionIndex, upgrades, level, score = 0, results = [] }
         if (questionIndex + 1 >= questions.length) {
           go("loadout", { upgrades: newUpgrades, pack, level, score });
         } else {
-          go("quiz", { pack, questionIndex: questionIndex + 1, upgrades: newUpgrades, level, score, results: newResults });
+          go("quiz", { pack, questionIndex: questionIndex + 1, upgrades: newUpgrades, level, score, results: newResults, correctCount: newCorrectCount });
         }
       });
     });
@@ -285,7 +286,7 @@ scene("quiz", ({ pack, questionIndex, upgrades, level, score = 0, results = [] }
         if (questionIndex + 1 >= questions.length) {
           go("loadout", { upgrades, pack, level, score });
         } else {
-          go("quiz", { pack, questionIndex: questionIndex + 1, upgrades, level, score, results: timeoutResults });
+          go("quiz", { pack, questionIndex: questionIndex + 1, upgrades, level, score, results: timeoutResults, correctCount });
         }
       });
     }
@@ -408,16 +409,31 @@ function spawnBullets(origin, weapon) {
 
 function spawnBullet(origin, dir, isLaser = false) {
   play("shoot", { volume: 0.3 });
-  add([
-    sprite("bullet"),
-    pos(origin),
-    anchor("center"),
-    area(),
-    move(dir, isLaser ? 700 : 500),
-    offscreen({ destroy: true }),
-    "bullet",
-    { damage: isLaser ? 2 : 1 },
-  ]);
+  if (isLaser) {
+    // Laser: tall bright cyan beam that pierces through all aliens
+    add([
+      rect(5, 36),
+      pos(origin),
+      anchor("center"),
+      color(80, 255, 255),
+      area(),
+      move(dir, 700),
+      offscreen({ destroy: true }),
+      "bullet",
+      { damage: 1, piercing: true },
+    ]);
+  } else {
+    add([
+      sprite("bullet"),
+      pos(origin),
+      anchor("center"),
+      area(),
+      move(dir, 500),
+      offscreen({ destroy: true }),
+      "bullet",
+      { damage: 1, piercing: false },
+    ]);
+  }
 }
 
 function addExplosion(p) {
@@ -702,7 +718,7 @@ scene("shooter", ({ upgrades, pack, level, score: prevScore = 0 }) => {
     shotsHit++;
     addExplosion(bullet.pos);
     play("hit", { volume: 0.5 });
-    destroy(bullet);
+    if (!bullet.piercing) destroy(bullet);
     if (alien.hp <= 0) {
       score += Math.round(alien.points * scoreMultiplier);
       updateScore();
@@ -1171,7 +1187,7 @@ scene("boss", ({ upgrades, pack, level, score: prevScore = 0 }) => {
     shotsHit++;
     addExplosion(bullet.pos);
     play("hit", { volume: 0.4 });
-    destroy(bullet);
+    if (!bullet.piercing) destroy(bullet);
     updateBossBar();
 
     if (bossHp <= 0 && !bossDefeated) {
