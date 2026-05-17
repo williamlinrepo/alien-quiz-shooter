@@ -4,7 +4,7 @@ A browser-based space shooter with an educational quiz phase. Built with [KAPLAY
 
 ## Play
 
-Open the live URL: `https://williamlinrepo.github.io/alienquizshooter`
+Open the live URL: `https://williamlinrepo.github.io/alien-quiz-shooter`
 
 ## Run locally
 
