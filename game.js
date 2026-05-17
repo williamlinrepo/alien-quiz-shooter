@@ -143,6 +143,7 @@ scene("quiz", ({ pack, questionIndex, upgrades, level, score = 0 }) => {
   const filtered = pack.questions.filter(q => q.difficulty === targetDiff);
   // Pad with adjacent difficulty if not enough
   const pool = [...filtered, ...pack.questions.filter(q => q.difficulty !== targetDiff)]
+    .sort(() => Math.random() - 0.5)
     .slice(0, 10);
   // Use pool instead of pack.questions
   const questions = pool;
@@ -333,21 +334,22 @@ scene("loadout", ({ upgrades, pack, level, score = 0 }) => {
 
 function addStarfield(level = 1) {
   const themes = [
-    { bg: [0, 0, 20],    star: [200, 200, 255] },  // deep space (level 1)
-    { bg: [10, 0, 25],   star: [220, 150, 255] },  // nebula (level 2)
-    { bg: [20, 5, 0],    star: [255, 200, 150] },  // asteroid (level 3)
-    { bg: [0, 15, 10],   star: [150, 255, 200] },  // alien world (level 4+)
+    { bg: [0, 0, 60],    star: [180, 200, 255], star2: [255, 255, 180] },  // deep space — dark navy
+    { bg: [55, 0, 90],   star: [230, 130, 255], star2: [255, 100, 200] },  // nebula — vivid purple
+    { bg: [90, 20, 0],   star: [255, 180, 80],  star2: [255, 100, 60]  },  // asteroid — deep red/orange
+    { bg: [0, 70, 50],   star: [100, 255, 180], star2: [180, 255, 100] },  // alien world — dark teal
   ];
   const theme = themes[Math.min(level - 1, themes.length - 1)];
   setBackground(...theme.bg);
-  const STAR_COUNT = 80;
+  const STAR_COUNT = 90;
   const stars = [];
   for (let i = 0; i < STAR_COUNT; i++) {
+    const useStar2 = i > STAR_COUNT * 0.6;
     const s = add([
-      circle(rand(1, 2.5)),
+      circle(rand(1, 3.5)),
       pos(rand(0, width()), rand(0, height())),
-      color(...theme.star),
-      { speed: rand(40, 120) },
+      color(...(useStar2 ? theme.star2 : theme.star)),
+      { speed: rand(40, 130) },
     ]);
     stars.push(s);
   }
@@ -457,20 +459,16 @@ scene("shooter", ({ upgrades, pack, level, score: prevScore = 0 }) => {
     player.pos.y = clamp(player.pos.y, 20, height() - 20);
   });
 
-  // Firing
+  // Auto-fire
   let fireTimer = 0;
-  const FIRE_INTERVAL = { blaster: 0.25, spread: 0.22, laser: 0.15 };
+  const FIRE_INTERVAL = { blaster: 0.7, spread: 0.6, laser: 0.45 };
 
   onUpdate(() => {
-    if (isKeyDown("space")) {
-      fireTimer -= dt();
-      if (fireTimer <= 0) {
-        fireTimer = FIRE_INTERVAL[player.weapon] || 0.25;
-        spawnBullets(player.pos, player.weapon);
-        shotsFired++;
-      }
-    } else {
-      fireTimer = 0;
+    fireTimer -= dt();
+    if (fireTimer <= 0) {
+      fireTimer = FIRE_INTERVAL[player.weapon] || 0.4;
+      spawnBullets(player.pos, player.weapon);
+      shotsFired++;
     }
   });
 
@@ -697,19 +695,7 @@ scene("shooter", ({ upgrades, pack, level, score: prevScore = 0 }) => {
     p._hit();
   });
 
-  // Touch / mobile controls
-  const fireBtn = add([
-    rect(90, 60, { radius: 10 }),
-    pos(width() - 100, height() - 80),
-    anchor("center"),
-    color(40, 120, 40),
-    opacity(0.75),
-    area(),
-    fixed(),
-    "ui",
-  ]);
-  add([text("FIRE", { size: 18 }), pos(width() - 100, height() - 80), anchor("center"), color(255,255,255), fixed(), "ui"]);
-
+  // Mobile controls — BOMB only (firing is automatic)
   const bombBtn = add([
     rect(90, 60, { radius: 10 }),
     pos(100, height() - 80),
@@ -721,10 +707,6 @@ scene("shooter", ({ upgrades, pack, level, score: prevScore = 0 }) => {
     "ui",
   ]);
   add([text("BOMB", { size: 18 }), pos(100, height() - 80), anchor("center"), color(255,255,255), fixed(), "ui"]);
-
-  let touchFireHeld = false;
-  fireBtn.onHover(() => { touchFireHeld = true; });
-  fireBtn.onHoverEnd(() => { touchFireHeld = false; });
 
   bombBtn.onClick(() => {
     if (smartBombs > 0) {
@@ -742,20 +724,9 @@ scene("shooter", ({ upgrades, pack, level, score: prevScore = 0 }) => {
   });
 
   onTouchMove((touch) => {
-    if (fireBtn.hasPoint(touch.pos) || bombBtn.hasPoint(touch.pos)) return;
+    if (bombBtn.hasPoint(touch.pos)) return;
     player.pos.x = clamp(touch.pos.x, 20, width() - 20);
     player.pos.y = clamp(touch.pos.y, 20, height() - 20);
-  });
-
-  onUpdate(() => {
-    if (touchFireHeld) {
-      fireTimer -= dt();
-      if (fireTimer <= 0) {
-        fireTimer = FIRE_INTERVAL[player.weapon] || 0.25;
-        spawnBullets(player.pos, player.weapon);
-        shotsFired++;
-      }
-    }
   });
 });
 
@@ -918,17 +889,13 @@ scene("boss", ({ upgrades, pack, level, score: prevScore = 0 }) => {
   });
 
   let fireTimer = 0;
-  const FIRE_INTERVAL = { blaster: 0.25, spread: 0.22, laser: 0.15 };
+  const FIRE_INTERVAL = { blaster: 0.7, spread: 0.6, laser: 0.45 };
   onUpdate(() => {
-    if (isKeyDown("space")) {
-      fireTimer -= dt();
-      if (fireTimer <= 0) {
-        fireTimer = FIRE_INTERVAL[player.weapon] || 0.25;
-        spawnBullets(player.pos, player.weapon);
-        shotsFired++;
-      }
-    } else {
-      fireTimer = 0;
+    fireTimer -= dt();
+    if (fireTimer <= 0) {
+      fireTimer = FIRE_INTERVAL[player.weapon] || 0.4;
+      spawnBullets(player.pos, player.weapon);
+      shotsFired++;
     }
   });
 
@@ -1076,7 +1043,7 @@ scene("boss", ({ upgrades, pack, level, score: prevScore = 0 }) => {
   function fireBossSpread(count, speedBase) {
     const angleStep = Math.PI / (count + 1);
     for (let i = 1; i <= count; i++) {
-      const spreadAngle = -Math.PI / 2 + (i - (count + 1) / 2) * (Math.PI / 6);
+      const spreadAngle = Math.PI / 2 + (i - (count + 1) / 2) * (Math.PI / 6);
       const d = vec2(Math.cos(spreadAngle), Math.sin(spreadAngle));
       add([
         circle(5),
