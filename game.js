@@ -459,20 +459,16 @@ scene("shooter", ({ upgrades, pack, level, score: prevScore = 0 }) => {
     player.pos.y = clamp(player.pos.y, 20, height() - 20);
   });
 
-  // Firing
+  // Auto-fire
   let fireTimer = 0;
-  const FIRE_INTERVAL = { blaster: 0.25, spread: 0.22, laser: 0.15 };
+  const FIRE_INTERVAL = { blaster: 0.4, spread: 0.35, laser: 0.25 };
 
   onUpdate(() => {
-    if (isKeyDown("space")) {
-      fireTimer -= dt();
-      if (fireTimer <= 0) {
-        fireTimer = FIRE_INTERVAL[player.weapon] || 0.25;
-        spawnBullets(player.pos, player.weapon);
-        shotsFired++;
-      }
-    } else {
-      fireTimer = 0;
+    fireTimer -= dt();
+    if (fireTimer <= 0) {
+      fireTimer = FIRE_INTERVAL[player.weapon] || 0.4;
+      spawnBullets(player.pos, player.weapon);
+      shotsFired++;
     }
   });
 
@@ -699,19 +695,7 @@ scene("shooter", ({ upgrades, pack, level, score: prevScore = 0 }) => {
     p._hit();
   });
 
-  // Touch / mobile controls
-  const fireBtn = add([
-    rect(90, 60, { radius: 10 }),
-    pos(width() - 100, height() - 80),
-    anchor("center"),
-    color(40, 120, 40),
-    opacity(0.75),
-    area(),
-    fixed(),
-    "ui",
-  ]);
-  add([text("FIRE", { size: 18 }), pos(width() - 100, height() - 80), anchor("center"), color(255,255,255), fixed(), "ui"]);
-
+  // Mobile controls — BOMB only (firing is automatic)
   const bombBtn = add([
     rect(90, 60, { radius: 10 }),
     pos(100, height() - 80),
@@ -723,10 +707,6 @@ scene("shooter", ({ upgrades, pack, level, score: prevScore = 0 }) => {
     "ui",
   ]);
   add([text("BOMB", { size: 18 }), pos(100, height() - 80), anchor("center"), color(255,255,255), fixed(), "ui"]);
-
-  let touchFireHeld = false;
-  fireBtn.onHover(() => { touchFireHeld = true; });
-  fireBtn.onHoverEnd(() => { touchFireHeld = false; });
 
   bombBtn.onClick(() => {
     if (smartBombs > 0) {
@@ -744,20 +724,9 @@ scene("shooter", ({ upgrades, pack, level, score: prevScore = 0 }) => {
   });
 
   onTouchMove((touch) => {
-    if (fireBtn.hasPoint(touch.pos) || bombBtn.hasPoint(touch.pos)) return;
+    if (bombBtn.hasPoint(touch.pos)) return;
     player.pos.x = clamp(touch.pos.x, 20, width() - 20);
     player.pos.y = clamp(touch.pos.y, 20, height() - 20);
-  });
-
-  onUpdate(() => {
-    if (touchFireHeld) {
-      fireTimer -= dt();
-      if (fireTimer <= 0) {
-        fireTimer = FIRE_INTERVAL[player.weapon] || 0.25;
-        spawnBullets(player.pos, player.weapon);
-        shotsFired++;
-      }
-    }
   });
 });
 
@@ -920,17 +889,13 @@ scene("boss", ({ upgrades, pack, level, score: prevScore = 0 }) => {
   });
 
   let fireTimer = 0;
-  const FIRE_INTERVAL = { blaster: 0.25, spread: 0.22, laser: 0.15 };
+  const FIRE_INTERVAL = { blaster: 0.4, spread: 0.35, laser: 0.25 };
   onUpdate(() => {
-    if (isKeyDown("space")) {
-      fireTimer -= dt();
-      if (fireTimer <= 0) {
-        fireTimer = FIRE_INTERVAL[player.weapon] || 0.25;
-        spawnBullets(player.pos, player.weapon);
-        shotsFired++;
-      }
-    } else {
-      fireTimer = 0;
+    fireTimer -= dt();
+    if (fireTimer <= 0) {
+      fireTimer = FIRE_INTERVAL[player.weapon] || 0.4;
+      spawnBullets(player.pos, player.weapon);
+      shotsFired++;
     }
   });
 
