@@ -452,13 +452,13 @@ scene("shooter", ({ upgrades }) => {
     if (smartBombs > 0) {
       smartBombs--;
       updateHUD();
-      every("alien", (a) => {
+      get("alien").forEach((a) => {
         addExplosion(a.pos);
         score += Math.round(a.points * scoreMultiplier);
         shotsHit++;
         destroy(a);
       });
-      every("hpBar", destroy);
+      get("hpBar").forEach(destroy);
       updateScore();
     }
   });
@@ -612,7 +612,7 @@ scene("shooter", ({ upgrades }) => {
       score += Math.round(alien.points * scoreMultiplier);
       updateScore();
       addExplosion(alien.pos);
-      every("hpBar", (bar) => {
+      get("hpBar").forEach((bar) => {
         if (bar.alien === alien) destroy(bar);
       });
       destroy(alien);
@@ -663,13 +663,13 @@ scene("shooter", ({ upgrades }) => {
     if (smartBombs > 0) {
       smartBombs--;
       updateHUD();
-      every("alien", (a) => {
+      get("alien").forEach((a) => {
         score += Math.round(a.points * scoreMultiplier);
         shotsHit++;
         addExplosion(a.pos);
         destroy(a);
       });
-      every("hpBar", destroy);
+      get("hpBar").forEach(destroy);
       updateScore();
     }
   });
