@@ -215,7 +215,7 @@ scene("quiz", ({ pack, questionIndex, upgrades, level, score = 0 }) => {
         if (questionIndex + 1 >= questions.length) {
           go("loadout", { upgrades: newUpgrades, pack, level, score });
         } else {
-          go("quiz", { pack, questionIndex: questionIndex + 1, upgrades: newUpgrades, level });
+          go("quiz", { pack, questionIndex: questionIndex + 1, upgrades: newUpgrades, level, score });
         }
       });
     });
@@ -260,7 +260,7 @@ scene("quiz", ({ pack, questionIndex, upgrades, level, score = 0 }) => {
         if (questionIndex + 1 >= questions.length) {
           go("loadout", { upgrades, pack, level, score });
         } else {
-          go("quiz", { pack, questionIndex: questionIndex + 1, upgrades, level });
+          go("quiz", { pack, questionIndex: questionIndex + 1, upgrades, level, score });
         }
       });
     }
