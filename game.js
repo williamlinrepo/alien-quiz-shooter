@@ -27,6 +27,21 @@ function defaultUpgrades() {
   };
 }
 
+const HS_KEY = "alienquiz_scores";
+const HS_MAX = 10;
+
+function loadScores() {
+  try { return JSON.parse(localStorage.getItem(HS_KEY)) || []; }
+  catch { return []; }
+}
+
+function saveScore(name, score) {
+  const scores = loadScores();
+  scores.push({ name: name.toUpperCase().slice(0, 3), score });
+  scores.sort((a, b) => b.score - a.score);
+  localStorage.setItem(HS_KEY, JSON.stringify(scores.slice(0, HS_MAX)));
+}
+
 scene("title", (packs) => {
   add([
     text("ALIEN QUIZ SHOOTER", { size: 40, font: "monospace" }),
@@ -604,13 +619,101 @@ scene("shooter", ({ upgrades }) => {
   });
 });
 
-scene("gameover", (data) => {
-  add([text("GAME OVER (stub)\nScore: " + data.score, { size: 28 }), pos(width()/2, height()/2), anchor("center")]);
+scene("gameover", ({ score, accuracy, timeAlive }) => {
+  addStarfield();
+
+  add([
+    text("GAME OVER", { size: 48 }),
+    pos(width() / 2, 80),
+    anchor("center"),
+    color(255, 60, 60),
+  ]);
+
+  add([
+    text(`Score: ${score}\nAccuracy bonus: ${accuracy}\nTime alive: ${timeAlive}s`, { size: 22 }),
+    pos(width() / 2, 180),
+    anchor("center"),
+    color(220, 220, 255),
+  ]);
+
+  add([text("Enter your name:", { size: 20 }), pos(width()/2, 300), anchor("center"), color(200, 200, 200)]);
+
+  let nameChars = ["A", "A", "A"];
+  let cursor = 0;
+
+  const nameDisplay = add([
+    text(nameChars.join(" "), { size: 36 }),
+    pos(width() / 2, 350),
+    anchor("center"),
+    color(255, 230, 0),
+  ]);
+
+  add([text("< > to move   ^ v to change   ENTER to save", { size: 14 }), pos(width()/2, 400), anchor("center"), color(150, 150, 150)]);
+
+  function updateNameDisplay() {
+    nameDisplay.text = nameChars.map((c, i) => i === cursor ? `[${c}]` : c).join(" ");
+  }
+  updateNameDisplay();
+
+  onKeyPress("left",  () => { cursor = (cursor + 2) % 3; updateNameDisplay(); });
+  onKeyPress("right", () => { cursor = (cursor + 1) % 3; updateNameDisplay(); });
+  onKeyPress("up",    () => { nameChars[cursor] = String.fromCharCode((nameChars[cursor].charCodeAt(0) - 65 + 1) % 26 + 65); updateNameDisplay(); });
+  onKeyPress("down",  () => { nameChars[cursor] = String.fromCharCode((nameChars[cursor].charCodeAt(0) - 65 + 25) % 26 + 65); updateNameDisplay(); });
+
+  onKeyPress("enter", () => {
+    saveScore(nameChars.join(""), score);
+    go("highscores");
+  });
+
+  // Share button
+  const shareBtn = add([
+    rect(260, 50, { radius: 8 }),
+    pos(width() / 2, height() - 60),
+    anchor("center"),
+    color(30, 120, 30),
+    area(),
+  ]);
+  add([text("Share Score!", { size: 20 }), pos(width()/2, height()-60), anchor("center"), color(255,255,255)]);
+
+  shareBtn.onClick(() => {
+    const msg = `I scored ${score} in Alien Quiz Shooter! Can you beat me? ${location.href}`;
+    if (navigator.share) {
+      navigator.share({ title: "Alien Quiz Shooter", text: msg, url: location.href }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(msg).then(() => {
+        add([text("Copied!", { size: 18 }), pos(width()/2, height()-110), anchor("center"), color(80, 220, 80)]);
+      });
+    }
+  });
 });
 
 scene("highscores", () => {
-  add([text("HIGH SCORES (stub)"), pos(width()/2, height()/2), anchor("center")]);
-  onKeyPress("escape", () => loadPacks().then((packs) => go("title", packs)));
+  addStarfield();
+
+  add([text("HIGH SCORES", { size: 40 }), pos(width()/2, 50), anchor("center"), color(255, 230, 0)]);
+
+  const scores = loadScores();
+  if (scores.length === 0) {
+    add([text("No scores yet - play a game!", { size: 22 }), pos(width()/2, 200), anchor("center"), color(180, 180, 180)]);
+  } else {
+    scores.forEach((entry, i) => {
+      add([
+        text(`${i + 1}. ${entry.name}   ${entry.score}`, { size: 22 }),
+        pos(width() / 2, 130 + i * 38),
+        anchor("center"),
+        color(i === 0 ? rgb(255, 220, 0) : rgb(220, 220, 220)),
+      ]);
+    });
+  }
+
+  add([
+    text("Press ENTER or ESC to return", { size: 16 }),
+    pos(width() / 2, height() - 30),
+    anchor("center"),
+    color(130, 130, 130),
+  ]);
+
+  onKeyPress(["enter", "escape"], () => loadPacks().then((packs) => go("title", packs)));
 });
 
 loadPacks().then((packs) => go("title", packs));
