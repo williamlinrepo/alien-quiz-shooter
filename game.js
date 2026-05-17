@@ -62,8 +62,22 @@ scene("title", (packs) => {
   ]);
 
   add([
+    text("Answer quiz questions to upgrade your ship — then survive the alien waves!", { size: 15, width: 620 }),
+    pos(width() / 2, 118),
+    anchor("center"),
+    color(180, 220, 180),
+  ]);
+
+  add([
+    text("10 questions per level  |  Each correct answer = 1 upgrade  |  Upgrades reset every level", { size: 13, width: 680 }),
+    pos(width() / 2, 148),
+    anchor("center"),
+    color(140, 140, 180),
+  ]);
+
+  add([
     text("Choose a topic pack:", { size: 20 }),
-    pos(width() / 2, 160),
+    pos(width() / 2, 178),
     anchor("center"),
     color(200, 200, 255),
   ]);
@@ -155,6 +169,14 @@ scene("quiz", ({ pack, questionIndex, upgrades, level, score = 0 }) => {
     text(`Q${qNum} of 10`, { size: 16 }),
     pos(20, 16),
     color(180, 180, 180),
+  ]);
+
+  // Show what this question is worth
+  add([
+    text(`Correct = +${upgradeName(qNum)}`, { size: 15 }),
+    pos(width() - 10, 16),
+    anchor("right"),
+    color(80, 220, 130),
   ]);
 
   // Question text
