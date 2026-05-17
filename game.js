@@ -170,24 +170,49 @@ scene("quiz", ({ pack, questionIndex, upgrades, level, score = 0, results = [], 
     color(180, 180, 180),
   ]);
 
-  // Show what the next correct answer earns
-  const nextReward = correctCount < 10 ? upgradeName(correctCount + 1) : null;
+  // Question text (narrowed to leave room for reward table on the right)
   add([
-    text(nextReward ? `Next correct = +${nextReward}` : "All upgrades earned!", { size: 15 }),
-    pos(width() - 10, 16),
-    anchor("right"),
-    color(nextReward ? [80, 220, 130] : [255, 200, 0]),
-  ]);
-
-  // Question text
-  add([
-    text(q.q, { size: 22, width: 760 }),
-    pos(width() / 2, 100),
+    text(q.q, { size: 22, width: 580 }),
+    pos(300, 100),
     anchor("center"),
     color(255, 255, 255),
   ]);
 
-  // Answer buttons
+  // Reward table — right side panel
+  const rewardRows = [
+    "1 correct → +1 Life",
+    "2 correct → +1 Life",
+    "3 correct → +1 Life",
+    "4 correct → Shield",
+    "5 correct → Shield+",
+    "6 correct → Spread",
+    "7 correct → Laser",
+    "8 correct → Bomb",
+    "9 correct → Bomb x2",
+    "10 correct → 1.5× Score",
+  ];
+
+  add([
+    text("REWARDS", { size: 13 }),
+    pos(648, 36),
+    anchor("left"),
+    color(180, 180, 180),
+  ]);
+
+  rewardRows.forEach((label, i) => {
+    const earned = i < correctCount;
+    const isNext = i === correctCount;
+    const rowColor = earned ? [60, 210, 80] : isNext ? [255, 220, 0] : [90, 90, 90];
+    const prefix = earned ? "✓ " : isNext ? "► " : "  ";
+    add([
+      text(prefix + label, { size: 12 }),
+      pos(645, 58 + i * 52),
+      anchor("left"),
+      color(...rowColor),
+    ]);
+  });
+
+  // Answer buttons — shifted left to make room for reward table
   const colors = [
     [220, 60, 60],
     [60, 160, 220],
@@ -200,11 +225,11 @@ scene("quiz", ({ pack, questionIndex, upgrades, level, score = 0, results = [], 
   q.choices.forEach((choice, i) => {
     const col = i < 2 ? 0 : 1;
     const row = i % 2;
-    const btnX = 210 + col * 400;
+    const btnX = 160 + col * 310;
     const btnY = 280 + row * 120;
 
     const btn = add([
-      rect(360, 90, { radius: 10 }),
+      rect(290, 90, { radius: 10 }),
       pos(btnX, btnY),
       anchor("center"),
       color(...colors[i]),
@@ -212,7 +237,7 @@ scene("quiz", ({ pack, questionIndex, upgrades, level, score = 0, results = [], 
     ]);
 
     add([
-      text(choice, { size: 20, width: 320 }),
+      text(choice, { size: 18, width: 260 }),
       pos(btnX, btnY),
       anchor("center"),
       color(255, 255, 255),
@@ -230,7 +255,7 @@ scene("quiz", ({ pack, questionIndex, upgrades, level, score = 0, results = [], 
 
       add([
         text(correct ? "CORRECT! +" + upgradeName(newCorrectCount) : "Wrong!", { size: 28 }),
-        pos(width() / 2, 480),
+        pos(300, 480),
         anchor("center"),
         color(correct ? 50 : 220, correct ? 220 : 50, 50),
       ]);
@@ -248,18 +273,18 @@ scene("quiz", ({ pack, questionIndex, upgrades, level, score = 0, results = [], 
 
   // Timer bar background
   add([
-    rect(760, 20, { radius: 4 }),
-    pos(width() / 2, 220),
+    rect(600, 20, { radius: 4 }),
+    pos(300, 220),
     anchor("center"),
     color(60, 60, 60),
   ]);
 
   // Timer bar (animated)
   const timerBar = add([
-    rect(760, 20, { radius: 4 }),
-    pos(20, 210),
+    rect(600, 20, { radius: 4 }),
+    pos(0, 210),
     color(80, 200, 255),
-    { fullWidth: 760 },
+    { fullWidth: 600 },
   ]);
 
   let timeLeft = QUESTION_TIME;
@@ -277,7 +302,7 @@ scene("quiz", ({ pack, questionIndex, upgrades, level, score = 0, results = [], 
       play("wrong", { volume: 0.5 });
       add([
         text("Time's up!", { size: 28 }),
-        pos(width() / 2, 480),
+        pos(300, 480),
         anchor("center"),
         color(220, 80, 80),
       ]);
@@ -304,7 +329,7 @@ scene("quiz", ({ pack, questionIndex, upgrades, level, score = 0, results = [], 
     }
     add([
       circle(8),
-      pos(width() / 2 - 90 + i * 20, height() - 20),
+      pos(300 - 90 + i * 20, height() - 20),
       anchor("center"),
       color(...col),
     ]);
