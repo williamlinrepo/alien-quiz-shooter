@@ -629,6 +629,67 @@ scene("shooter", ({ upgrades }) => {
     destroy(bullet);
     p._hit();
   });
+
+  // Touch / mobile controls
+  const fireBtn = add([
+    rect(90, 60, { radius: 10 }),
+    pos(width() - 100, height() - 80),
+    anchor("center"),
+    color(40, 120, 40),
+    opacity(0.75),
+    area(),
+    fixed(),
+    "ui",
+  ]);
+  add([text("FIRE", { size: 18 }), pos(width() - 100, height() - 80), anchor("center"), color(255,255,255), fixed(), "ui"]);
+
+  const bombBtn = add([
+    rect(90, 60, { radius: 10 }),
+    pos(100, height() - 80),
+    anchor("center"),
+    color(100, 80, 20),
+    opacity(0.75),
+    area(),
+    fixed(),
+    "ui",
+  ]);
+  add([text("BOMB", { size: 18 }), pos(100, height() - 80), anchor("center"), color(255,255,255), fixed(), "ui"]);
+
+  let touchFireHeld = false;
+  fireBtn.onHover(() => { touchFireHeld = true; });
+  fireBtn.onHoverEnd(() => { touchFireHeld = false; });
+
+  bombBtn.onClick(() => {
+    if (smartBombs > 0) {
+      smartBombs--;
+      updateHUD();
+      every("alien", (a) => {
+        score += Math.round(a.points * scoreMultiplier);
+        shotsHit++;
+        addExplosion(a.pos);
+        destroy(a);
+      });
+      every("hpBar", destroy);
+      updateScore();
+    }
+  });
+
+  onTouchMove((touch) => {
+    if (fireBtn.hasPoint(touch.pos) || bombBtn.hasPoint(touch.pos)) return;
+    player.pos.x = clamp(touch.pos.x, 20, width() - 20);
+    player.pos.y = clamp(touch.pos.y, 20, height() - 20);
+  });
+
+  onUpdate(() => {
+    if (touchFireHeld) {
+      fireTimer -= dt();
+      if (fireTimer <= 0) {
+        fireTimer = FIRE_INTERVAL[player.weapon] || 0.25;
+        spawnBullets(player.pos, player.weapon);
+        shotsFired++;
+      }
+    }
+  });
 });
 
 scene("gameover", ({ score, accuracy, timeAlive }) => {
