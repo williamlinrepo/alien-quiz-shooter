@@ -62,8 +62,22 @@ scene("title", (packs) => {
   ]);
 
   add([
+    text("Answer quiz questions to upgrade your ship — then survive the alien waves!", { size: 15, width: 620 }),
+    pos(width() / 2, 118),
+    anchor("center"),
+    color(180, 220, 180),
+  ]);
+
+  add([
+    text("10 questions per level  |  Each correct answer = 1 upgrade  |  Upgrades reset every level", { size: 13, width: 680 }),
+    pos(width() / 2, 148),
+    anchor("center"),
+    color(140, 140, 180),
+  ]);
+
+  add([
     text("Choose a topic pack:", { size: 20 }),
-    pos(width() / 2, 160),
+    pos(width() / 2, 178),
     anchor("center"),
     color(200, 200, 255),
   ]);
@@ -137,7 +151,7 @@ function upgradeName(qNum) {
 
 const QUESTION_TIME = 8; // seconds per question
 
-scene("quiz", ({ pack, questionIndex, upgrades, level, score = 0 }) => {
+scene("quiz", ({ pack, questionIndex, upgrades, level, score = 0, results = [] }) => {
   // Filter questions by difficulty based on level
   const targetDiff = level <= 1 ? "easy" : level === 2 ? "medium" : "hard";
   const filtered = pack.questions.filter(q => q.difficulty === targetDiff);
@@ -155,6 +169,14 @@ scene("quiz", ({ pack, questionIndex, upgrades, level, score = 0 }) => {
     text(`Q${qNum} of 10`, { size: 16 }),
     pos(20, 16),
     color(180, 180, 180),
+  ]);
+
+  // Show what this question is worth
+  add([
+    text(`Correct = +${upgradeName(qNum)}`, { size: 15 }),
+    pos(width() - 10, 16),
+    anchor("right"),
+    color(80, 220, 130),
   ]);
 
   // Question text
@@ -213,10 +235,11 @@ scene("quiz", ({ pack, questionIndex, upgrades, level, score = 0 }) => {
       ]);
 
       wait(1.2, () => {
+        const newResults = [...results, correct];
         if (questionIndex + 1 >= questions.length) {
           go("loadout", { upgrades: newUpgrades, pack, level, score });
         } else {
-          go("quiz", { pack, questionIndex: questionIndex + 1, upgrades: newUpgrades, level, score });
+          go("quiz", { pack, questionIndex: questionIndex + 1, upgrades: newUpgrades, level, score, results: newResults });
         }
       });
     });
@@ -258,24 +281,31 @@ scene("quiz", ({ pack, questionIndex, upgrades, level, score = 0 }) => {
         color(220, 80, 80),
       ]);
       wait(1.2, () => {
+        const timeoutResults = [...results, false];
         if (questionIndex + 1 >= questions.length) {
           go("loadout", { upgrades, pack, level, score });
         } else {
-          go("quiz", { pack, questionIndex: questionIndex + 1, upgrades, level, score });
+          go("quiz", { pack, questionIndex: questionIndex + 1, upgrades, level, score, results: timeoutResults });
         }
       });
     }
   });
 
-  // Progress dots
+  // Progress dots — green = correct, red = wrong, yellow = current, grey = upcoming
   for (let i = 0; i < 10; i++) {
+    let col;
+    if (i < questionIndex) {
+      col = results[i] ? [60, 210, 60] : [220, 50, 50];
+    } else if (i === questionIndex) {
+      col = [255, 220, 0];
+    } else {
+      col = [60, 60, 60];
+    }
     add([
       circle(8),
       pos(width() / 2 - 90 + i * 20, height() - 20),
       anchor("center"),
-      color(i < questionIndex ? 80 : i === questionIndex ? 255 : 40,
-            i < questionIndex ? 200 : i === questionIndex ? 200 : 40,
-            i < questionIndex ? 80 : i === questionIndex ? 80 : 40),
+      color(...col),
     ]);
   }
 });
@@ -730,7 +760,7 @@ scene("shooter", ({ upgrades, pack, level, score: prevScore = 0 }) => {
   });
 });
 
-scene("levelcomplete", ({ upgrades, pack, level, score }) => {
+scene("levelcomplete", ({ pack, level, score }) => {
   addStarfield(level);
 
   add([
@@ -772,7 +802,7 @@ scene("levelcomplete", ({ upgrades, pack, level, score }) => {
   loop(1, () => {
     countdown--;
     if (countdown <= 0) {
-      go("quiz", { pack, questionIndex: 0, upgrades, level: level + 1, score });
+      go("quiz", { pack, questionIndex: 0, upgrades: defaultUpgrades(), level: level + 1, score });
     } else {
       countLabel.text = `Starting in ${countdown}...`;
     }
@@ -1158,7 +1188,7 @@ scene("boss", ({ upgrades, pack, level, score: prevScore = 0 }) => {
       updateScore();
       parts.forEach(p => { if (p.exists()) destroy(p); });
       destroy(bossBody);
-      wait(1.5, () => go("levelcomplete", { upgrades, pack, level, score }));
+      wait(1.5, () => go("levelcomplete", { pack, level, score }));
     }
   });
 
