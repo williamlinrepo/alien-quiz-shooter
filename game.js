@@ -322,7 +322,13 @@ scene("loadout", ({ upgrades, pack, level, score = 0 }) => {
       color(80, 220, 80),
     ]);
   });
-  wait(totalDelay + 1.2, () => go("shooter", { upgrades, pack, level, score }));
+  wait(totalDelay + 1.2, () => {
+    if (level % 5 === 0) {
+      go("boss", { upgrades, pack, level, score });
+    } else {
+      go("shooter", { upgrades, pack, level, score });
+    }
+  });
 });
 
 function addStarfield(level = 1) {
@@ -800,6 +806,400 @@ scene("levelcomplete", ({ upgrades, pack, level, score }) => {
       countLabel.text = `Starting in ${countdown}...`;
     }
   });
+});
+
+scene("boss", ({ upgrades, pack, level, score: prevScore = 0 }) => {
+  addStarfield(level);
+
+  let score = prevScore;
+  let lives = upgrades.lives;
+  let shieldHits = upgrades.shieldHits;
+  let smartBombs = upgrades.smartBombs;
+  let scoreMultiplier = upgrades.scoreMultiplier;
+  let shotsFired = 0;
+  let shotsHit = 0;
+  let timeAlive = 0;
+  let invincible = false;
+
+  // Which boss type (1-4) and how many times we've seen this boss
+  const bossIndex = Math.floor((level / 5 - 1)) % 4; // 0-3
+  const bossVisit = Math.floor((level / 5 - 1) / 4) + 1; // 1, 2, 3...
+
+  const bossDefs = [
+    {
+      name: "VANGUARD",
+      color: [20, 180, 160],
+      w: 90, h: 55,
+      baseHp: 60,
+      wingColor: [10, 120, 110],
+      coreColor: [180, 255, 240],
+    },
+    {
+      name: "REAPER",
+      color: [130, 30, 180],
+      w: 70, h: 70,
+      baseHp: 140,
+      wingColor: [90, 20, 130],
+      coreColor: [255, 80, 220],
+    },
+    {
+      name: "BEHEMOTH",
+      color: [180, 20, 20],
+      w: 130, h: 70,
+      baseHp: 280,
+      wingColor: [120, 10, 10],
+      coreColor: [255, 150, 50],
+    },
+    {
+      name: "OMNIDREAD",
+      color: [30, 30, 30],
+      w: 100, h: 80,
+      baseHp: 450,
+      wingColor: [60, 60, 60],
+      coreColor: [255, 180, 0],
+    },
+  ];
+
+  const def = bossDefs[bossIndex];
+  const bossMaxHp = Math.floor(def.baseHp * bossVisit * (1 + (level - 5) * 0.05));
+  let bossHp = bossMaxHp;
+  let bossTime = 0;
+  let bossDefeated = false;
+
+  const speedMult = 1 + (level - 1) * 0.25;
+
+  // --- Boss name + HP bar ---
+  add([
+    text(def.name, { size: 22 }),
+    pos(width() / 2, 18),
+    anchor("center"),
+    color(...def.color),
+  ]);
+
+  const hpBarBg = add([
+    rect(500, 20, { radius: 4 }),
+    pos(width() / 2, 42),
+    anchor("center"),
+    color(60, 20, 20),
+  ]);
+
+  const hpBar = add([
+    rect(500, 20, { radius: 4 }),
+    pos(width() / 2 - 250, 32),
+    color(220, 40, 40),
+    { maxW: 500 },
+  ]);
+
+  // --- Player ---
+  const player = add([
+    sprite("ship"),
+    pos(width() / 2, height() - 80),
+    anchor("center"),
+    color(255, 255, 255),
+    area(),
+    "player",
+    { weapon: upgrades.weapon },
+  ]);
+
+  // Mouse tracking
+  onUpdate(() => {
+    player.pos.x = clamp(mousePos().x, 20, width() - 20);
+    player.pos.y = clamp(mousePos().y, 60, height() - 20);
+  });
+
+  const SHIP_SPEED = 320;
+  onUpdate(() => {
+    if (isKeyDown("left") || isKeyDown("a"))  player.pos.x -= SHIP_SPEED * dt();
+    if (isKeyDown("right") || isKeyDown("d")) player.pos.x += SHIP_SPEED * dt();
+    if (isKeyDown("up") || isKeyDown("w"))    player.pos.y -= SHIP_SPEED * dt();
+    if (isKeyDown("down") || isKeyDown("s"))  player.pos.y += SHIP_SPEED * dt();
+    player.pos.x = clamp(player.pos.x, 20, width() - 20);
+    player.pos.y = clamp(player.pos.y, 60, height() - 20);
+  });
+
+  let fireTimer = 0;
+  const FIRE_INTERVAL = { blaster: 0.25, spread: 0.22, laser: 0.15 };
+  onUpdate(() => {
+    if (isKeyDown("space")) {
+      fireTimer -= dt();
+      if (fireTimer <= 0) {
+        fireTimer = FIRE_INTERVAL[player.weapon] || 0.25;
+        spawnBullets(player.pos, player.weapon);
+        shotsFired++;
+      }
+    } else {
+      fireTimer = 0;
+    }
+  });
+
+  onKeyPress(["shift", "x"], () => {
+    if (smartBombs > 0) {
+      smartBombs--;
+      updateHUD();
+      bossHp = Math.max(1, bossHp - 40);
+      updateBossBar();
+      addExplosion(bossBody.pos);
+    }
+  });
+
+  const hudLives = add([text("", { size: 18 }), pos(10, 10), color(255, 80, 80)]);
+  const hudBombs = add([text("", { size: 18 }), pos(10, 34), color(255, 220, 50)]);
+  const hudScore = add([text("", { size: 18 }), pos(width() - 10, 10), anchor("right"), color(255, 255, 255)]);
+
+  function updateHUD() {
+    hudLives.text = "Lives: " + lives + (shieldHits > 0 ? "  Shield: " + shieldHits : "");
+    hudBombs.text = smartBombs > 0 ? "Bombs: " + smartBombs : "";
+  }
+  function updateScore() {
+    hudScore.text = "Score: " + score;
+  }
+  function updateBossBar() {
+    hpBar.width = Math.max(0, (bossHp / bossMaxHp) * hpBar.maxW);
+  }
+  updateHUD();
+  updateScore();
+
+  onUpdate(() => { timeAlive += dt(); });
+
+  function playerHit() {
+    if (invincible) return;
+    if (shieldHits > 0) {
+      shieldHits--;
+      updateHUD();
+      flashSprite(player, rgb(80, 180, 255));
+    } else {
+      lives--;
+      updateHUD();
+      flashSprite(player, rgb(255, 80, 80));
+      if (lives <= 0) {
+        const accuracy = shotsFired > 0 ? Math.floor((shotsHit / shotsFired) * 1000) : 0;
+        go("gameover", { score: score + accuracy, accuracy, timeAlive: Math.floor(timeAlive), level });
+      }
+    }
+    invincible = true;
+    wait(1.5, () => { invincible = false; });
+  }
+
+  // --- Boss body (hitbox) ---
+  const bossBody = add([
+    rect(def.w, def.h, { radius: 6 }),
+    pos(width() / 2, 120),
+    anchor("center"),
+    color(...def.color),
+    area(),
+    "boss",
+    { hp: bossHp },
+  ]);
+
+  // Decorative parts — follow bossBody in onUpdate
+  const parts = [];
+
+  if (bossIndex === 0) {
+    // Vanguard: swept wings
+    parts.push(add([rect(55, 18, { radius: 3 }), pos(0, 0), anchor("center"), color(...def.wingColor)]));
+    parts.push(add([rect(55, 18, { radius: 3 }), pos(0, 0), anchor("center"), color(...def.wingColor)]));
+    parts.push(add([circle(10), pos(0, 0), anchor("center"), color(...def.coreColor)]));
+  } else if (bossIndex === 1) {
+    // Reaper: twin downward prongs
+    parts.push(add([rect(22, 55, { radius: 3 }), pos(0, 0), anchor("center"), color(...def.wingColor)]));
+    parts.push(add([rect(22, 55, { radius: 3 }), pos(0, 0), anchor("center"), color(...def.wingColor)]));
+    parts.push(add([circle(14), pos(0, 0), anchor("center"), color(...def.coreColor)]));
+  } else if (bossIndex === 2) {
+    // Behemoth: side cannons + top turret
+    parts.push(add([rect(18, 45, { radius: 2 }), pos(0, 0), anchor("center"), color(...def.wingColor)]));
+    parts.push(add([rect(18, 45, { radius: 2 }), pos(0, 0), anchor("center"), color(...def.wingColor)]));
+    parts.push(add([rect(32, 28, { radius: 3 }), pos(0, 0), anchor("center"), color(...def.wingColor)]));
+    parts.push(add([circle(12), pos(0, 0), anchor("center"), color(...def.coreColor)]));
+  } else {
+    // Omnidread: orbiting golden orbs
+    parts.push(add([circle(14), pos(0, 0), anchor("center"), color(...def.coreColor)]));
+    parts.push(add([circle(14), pos(0, 0), anchor("center"), color(...def.coreColor)]));
+    parts.push(add([circle(22), pos(0, 0), anchor("center"), color(...def.wingColor)]));
+  }
+
+  // Update part positions relative to boss each frame
+  onUpdate(() => {
+    if (!bossBody.exists()) return;
+    const bx = bossBody.pos.x;
+    const by = bossBody.pos.y;
+
+    if (bossIndex === 0) {
+      parts[0].pos = vec2(bx - 68, by + 8);
+      parts[1].pos = vec2(bx + 68, by + 8);
+      parts[2].pos = vec2(bx, by);
+    } else if (bossIndex === 1) {
+      parts[0].pos = vec2(bx - 38, by + 40);
+      parts[1].pos = vec2(bx + 38, by + 40);
+      parts[2].pos = vec2(bx, by);
+    } else if (bossIndex === 2) {
+      parts[0].pos = vec2(bx - 74, by + 5);
+      parts[1].pos = vec2(bx + 74, by + 5);
+      parts[2].pos = vec2(bx, by - 38);
+      parts[3].pos = vec2(bx, by);
+    } else {
+      const orbitR = 50 + Math.sin(bossTime * 2) * 8;
+      parts[0].pos = vec2(bx + Math.cos(bossTime * 1.8) * orbitR, by + Math.sin(bossTime * 1.8) * orbitR * 0.5);
+      parts[1].pos = vec2(bx + Math.cos(bossTime * 1.8 + Math.PI) * orbitR, by + Math.sin(bossTime * 1.8 + Math.PI) * orbitR * 0.5);
+      parts[2].pos = vec2(bx, by);
+    }
+  });
+
+  // --- Boss movement ---
+  onUpdate(() => {
+    if (bossDefeated) return;
+    bossTime += dt();
+
+    let tx, ty;
+    if (bossIndex === 0) {
+      // Vanguard: smooth horizontal sweep
+      tx = width() / 2 + Math.sin(bossTime * 0.8) * 280;
+      ty = 120;
+    } else if (bossIndex === 1) {
+      // Reaper: figure-8
+      tx = width() / 2 + Math.sin(bossTime * 1.2) * 260;
+      ty = 110 + Math.sin(bossTime * 0.6) * 50;
+    } else if (bossIndex === 2) {
+      // Behemoth: slow sweep + periodic dives
+      tx = width() / 2 + Math.sin(bossTime * 0.5) * 220;
+      ty = 120 + Math.abs(Math.sin(bossTime * 0.35)) * 80;
+    } else {
+      // Omnidread: complex orbit
+      tx = width() / 2 + Math.sin(bossTime * 1.5) * 240;
+      ty = 110 + Math.sin(bossTime * 0.7 + 1.0) * 70;
+    }
+
+    bossBody.pos.x += (tx - bossBody.pos.x) * 3 * dt();
+    bossBody.pos.y += (ty - bossBody.pos.y) * 3 * dt();
+  });
+
+  // --- Boss attacks ---
+  function fireBossSpread(count, speedBase) {
+    const angleStep = Math.PI / (count + 1);
+    for (let i = 1; i <= count; i++) {
+      const spreadAngle = -Math.PI / 2 + (i - (count + 1) / 2) * (Math.PI / 6);
+      const d = vec2(Math.cos(spreadAngle), Math.sin(spreadAngle));
+      add([
+        circle(5),
+        pos(bossBody.pos),
+        color(255, 100, 50),
+        area(),
+        move(d, 180 * Math.min(speedMult, 2)),
+        offscreen({ destroy: true }),
+        "enemyBullet",
+      ]);
+    }
+  }
+
+  function fireAimed() {
+    if (!bossBody.exists()) return;
+    const dir = player.pos.sub(bossBody.pos).unit();
+    add([
+      circle(6),
+      pos(bossBody.pos),
+      color(255, 60, 200),
+      area(),
+      move(dir, 200 * Math.min(speedMult, 2)),
+      offscreen({ destroy: true }),
+      "enemyBullet",
+    ]);
+  }
+
+  function fireSpiral() {
+    if (!bossBody.exists()) return;
+    const count = 8;
+    for (let i = 0; i < count; i++) {
+      const angle = (i / count) * Math.PI * 2 + bossTime;
+      const dir = vec2(Math.cos(angle), Math.sin(angle));
+      add([
+        circle(5),
+        pos(bossBody.pos),
+        color(255, 200, 0),
+        area(),
+        move(dir, 160 * Math.min(speedMult, 2)),
+        offscreen({ destroy: true }),
+        "enemyBullet",
+      ]);
+    }
+  }
+
+  // Vanguard: triple spread every 2.5s
+  if (bossIndex === 0) {
+    loop(2.5, () => { if (!bossDefeated && bossBody.exists()) fireBossSpread(3, 180); });
+  }
+
+  // Reaper: aimed every 1.5s + burst every 6s
+  if (bossIndex === 1) {
+    loop(1.5, () => { if (!bossDefeated && bossBody.exists()) fireAimed(); });
+    loop(6, () => { if (!bossDefeated && bossBody.exists()) fireBossSpread(5, 160); });
+  }
+
+  // Behemoth: 5-way spread every 2s + spawn grunts every 8s
+  if (bossIndex === 2) {
+    loop(2, () => { if (!bossDefeated && bossBody.exists()) fireBossSpread(5, 160); });
+    loop(8, () => {
+      if (!bossDefeated && bossBody.exists()) {
+        for (let i = 0; i < 2; i++) {
+          wait(i * 0.4, () => {
+            if (!bossBody.exists()) return;
+            const g = add([
+              sprite("alien_grunt"),
+              pos(bossBody.pos.x + (i === 0 ? -60 : 60), bossBody.pos.y + 40),
+              anchor("center"),
+              area(),
+              "alien",
+              { hp: 1, points: 15, speed: 70 * speedMult, zigzag: false, fires: false, type: "grunt" },
+            ]);
+            g.onUpdate(() => {
+              g.pos.y += g.speed * dt();
+              if (g.pos.y > height() + 60) destroy(g);
+            });
+          });
+        }
+      }
+    });
+  }
+
+  // Omnidread: aimed every 1.2s + spiral every 4s
+  if (bossIndex === 3) {
+    loop(1.2, () => { if (!bossDefeated && bossBody.exists()) fireAimed(); });
+    loop(4, () => { if (!bossDefeated && bossBody.exists()) fireSpiral(); });
+    loop(7, () => { if (!bossDefeated && bossBody.exists()) fireBossSpread(7, 170); });
+  }
+
+  // --- Collisions ---
+  onCollide("bullet", "boss", (bullet, boss) => {
+    if (!bullet.exists() || !bossBody.exists()) return;
+    const dmg = bullet.damage || 1;
+    bossHp -= dmg;
+    shotsHit++;
+    addExplosion(bullet.pos);
+    play("hit", { volume: 0.4 });
+    destroy(bullet);
+    updateBossBar();
+
+    if (bossHp <= 0 && !bossDefeated) {
+      bossDefeated = true;
+      // Big explosion
+      for (let i = 0; i < 5; i++) {
+        wait(i * 0.15, () => addExplosion(vec2(
+          bossBody.pos.x + rand(-def.w / 2, def.w / 2),
+          bossBody.pos.y + rand(-def.h / 2, def.h / 2)
+        )));
+      }
+      const bossScore = Math.floor(def.baseHp * 10 * bossVisit * scoreMultiplier);
+      score += bossScore;
+      updateScore();
+      parts.forEach(p => { if (p.exists()) destroy(p); });
+      destroy(bossBody);
+      wait(1.5, () => go("levelcomplete", { upgrades, pack, level, score }));
+    }
+  });
+
+  onCollide("alien", "player", (alien, p) => { p._hit(); });
+  onCollide("enemyBullet", "player", (bullet, p) => { destroy(bullet); p._hit(); });
+  onCollide("boss", "player", (boss, p) => { p._hit(); });
+
+  player._hit = playerHit;
 });
 
 scene("gameover", ({ score, accuracy, timeAlive, level = 1 }) => {
