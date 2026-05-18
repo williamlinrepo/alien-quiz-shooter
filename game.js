@@ -3,6 +3,7 @@ kaplay({
   height: 600,
   letterbox: true,
   background: [0, 0, 20],
+  pixelDensity: window.devicePixelRatio,
 });
 
 loadSprite("ship",         "assets/sprites/ship.png");
@@ -581,7 +582,7 @@ scene("shooter", ({ upgrades, pack, level, score: prevScore = 0 }) => {
 
   function updateHUD() {
     hudLives.text = "Lives: " + lives + (shieldHits > 0 ? "  Shield: " + shieldHits : "");
-    hudBombs.text = smartBombs > 0 ? "Bombs: " + smartBombs : "";
+    hudBombs.text = "Bombs: " + smartBombs;
   }
   function updateScore() {
     hudScore.text = "Score: " + score;
@@ -1017,7 +1018,7 @@ scene("boss", ({ upgrades, pack, level, score: prevScore = 0 }) => {
 
   function updateHUD() {
     hudLives.text = "Lives: " + lives + (shieldHits > 0 ? "  Shield: " + shieldHits : "");
-    hudBombs.text = smartBombs > 0 ? "Bombs: " + smartBombs : "";
+    hudBombs.text = "Bombs: " + smartBombs;
   }
   function updateScore() {
     hudScore.text = "Score: " + score;
