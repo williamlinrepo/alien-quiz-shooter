@@ -11,11 +11,47 @@ loadSprite("alien_grunt",  "assets/sprites/alien_grunt.png");
 loadSprite("alien_buzzer", "assets/sprites/alien_buzzer.png");
 loadSprite("alien_tank",   "assets/sprites/alien_tank.png");
 loadSprite("bullet",       "assets/sprites/bullet.png");
-loadSound("shoot",    "assets/audio/shoot.wav");
-loadSound("hit",      "assets/audio/hit.wav");
-loadSound("correct",  "assets/audio/correct.wav");
-loadSound("wrong",    "assets/audio/wrong.wav");
-loadSound("gameover", "assets/audio/gameover.wav");
+loadSound("shoot",         "assets/audio/shoot.wav");
+loadSound("hit",           "assets/audio/hit.wav");
+loadSound("correct",       "assets/audio/correct.wav");
+loadSound("wrong",         "assets/audio/wrong.wav");
+loadSound("gameover",      "assets/audio/gameover.wav");
+loadSound("music_menu",    "assets/audio/nastelbom-upbeat-507934.mp3");
+loadSound("music_shooter", "assets/audio/mondamusic-retro-arcade-game-music-512837.mp3");
+
+let currentMusic = null;
+let muted = false;
+
+function playMusic(name) {
+  if (currentMusic) { currentMusic.stop(); currentMusic = null; }
+  currentMusic = play(name, { loop: true, volume: muted ? 0 : 0.4 });
+}
+
+function addMuteButton() {
+  const btn = add([
+    rect(70, 30, { radius: 6 }),
+    pos(width() - 8, height() - 8),
+    anchor("botright"),
+    color(40, 40, 60),
+    opacity(0.8),
+    area(),
+    fixed(),
+    z(100),
+  ]);
+  const label = add([
+    text(muted ? "UNMUTE" : "MUTE", { size: 13 }),
+    pos(width() - 43, height() - 23),
+    anchor("center"),
+    color(180, 180, 200),
+    fixed(),
+    z(101),
+  ]);
+  btn.onClick(() => {
+    muted = !muted;
+    volume(muted ? 0 : 1);
+    label.text = muted ? "UNMUTE" : "MUTE";
+  });
+}
 
 async function loadPacks() {
   const res = await fetch("assets/packs/index.json");
@@ -55,6 +91,8 @@ function saveScore(name, score) {
 }
 
 scene("title", (packs) => {
+  playMusic("music_menu");
+  addMuteButton();
   add([
     text("ALIEN QUIZ SHOOTER", { size: 40, font: "monospace" }),
     pos(width() / 2, 80),
@@ -153,6 +191,8 @@ function upgradeName(qNum) {
 const QUESTION_TIME = 8; // seconds per question
 
 scene("quiz", ({ pack, questionIndex, upgrades, level, score = 0, results = [], correctCount = 0, questions: savedQuestions }) => {
+  if (questionIndex === 0) playMusic("music_menu");
+  addMuteButton();
   // Select questions once at the start of the quiz; pass through on subsequent questions
   let questions;
   if (savedQuestions) {
@@ -354,6 +394,7 @@ scene("quiz", ({ pack, questionIndex, upgrades, level, score = 0, results = [], 
 });
 
 scene("loadout", ({ upgrades, pack, level, score = 0 }) => {
+  addMuteButton();
   add([
     text("YOUR LOADOUT", { size: 36 }),
     pos(width() / 2, 60),
@@ -503,6 +544,8 @@ function flashSprite(obj, col) {
 }
 
 scene("shooter", ({ upgrades, pack, level, score: prevScore = 0 }) => {
+  playMusic("music_shooter");
+  addMuteButton();
   addStarfield(level);
 
   const speedMult = 1 + (level - 1) * 0.25;
@@ -815,6 +858,7 @@ scene("shooter", ({ upgrades, pack, level, score: prevScore = 0 }) => {
 });
 
 scene("levelcomplete", ({ pack, level, score }) => {
+  addMuteButton();
   addStarfield(level);
 
   add([
@@ -864,6 +908,8 @@ scene("levelcomplete", ({ pack, level, score }) => {
 });
 
 scene("boss", ({ upgrades, pack, level, score: prevScore = 0 }) => {
+  playMusic("music_shooter");
+  addMuteButton();
   addStarfield(level);
 
   let score = prevScore;
@@ -1272,6 +1318,7 @@ scene("boss", ({ upgrades, pack, level, score: prevScore = 0 }) => {
 });
 
 scene("gameover", ({ score, accuracy, level = 1 }) => {
+  addMuteButton();
   addStarfield(1);
   play("gameover", { volume: 0.7 });
 
@@ -1341,6 +1388,7 @@ scene("gameover", ({ score, accuracy, level = 1 }) => {
 });
 
 scene("highscores", () => {
+  addMuteButton();
   addStarfield(1);
 
   add([text("HIGH SCORES", { size: 40 }), pos(width()/2, 50), anchor("center"), color(255, 230, 0)]);
