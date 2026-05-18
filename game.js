@@ -151,15 +151,31 @@ function upgradeName(qNum) {
 
 const QUESTION_TIME = 8; // seconds per question
 
-scene("quiz", ({ pack, questionIndex, upgrades, level, score = 0, results = [], correctCount = 0 }) => {
-  // Filter questions by difficulty based on level
-  const targetDiff = level <= 1 ? "easy" : level === 2 ? "medium" : "hard";
-  const filtered = pack.questions.filter(q => q.difficulty === targetDiff);
-  // Pad with adjacent difficulty if not enough
-  const pool = [...filtered, ...pack.questions.filter(q => q.difficulty !== targetDiff)]
-    .sort(() => Math.random() - 0.5)
-    .slice(0, 10);
-  const questions = pool;
+scene("quiz", ({ pack, questionIndex, upgrades, level, score = 0, results = [], correctCount = 0, questions: savedQuestions }) => {
+  // Select questions once at the start of the quiz; pass through on subsequent questions
+  let questions;
+  if (savedQuestions) {
+    questions = savedQuestions;
+  } else {
+    // Mix of difficulties per level: starts easy-heavy, gradually shifts to hard
+    // [easyCount, mediumCount, hardCount]
+    const mix = level === 1 ? [10, 0, 0]
+               : level === 2 ? [7, 3, 0]
+               : level === 3 ? [4, 6, 0]
+               : level === 4 ? [1, 6, 3]
+               : level === 5 ? [0, 4, 6]
+               :               [0, 1, 9];
+    const byDiff = {
+      easy:   pack.questions.filter(q => q.difficulty === "easy").sort(() => Math.random() - 0.5),
+      medium: pack.questions.filter(q => q.difficulty === "medium").sort(() => Math.random() - 0.5),
+      hard:   pack.questions.filter(q => q.difficulty === "hard").sort(() => Math.random() - 0.5),
+    };
+    questions = [
+      ...byDiff.easy.slice(0, mix[0]),
+      ...byDiff.medium.slice(0, mix[1]),
+      ...byDiff.hard.slice(0, mix[2]),
+    ].sort(() => Math.random() - 0.5); // shuffle so difficulty order isn't predictable
+  }
   const qNum = questionIndex + 1; // 1-based for display only
   const q = questions[questionIndex];
 
@@ -265,7 +281,7 @@ scene("quiz", ({ pack, questionIndex, upgrades, level, score = 0, results = [], 
         if (questionIndex + 1 >= questions.length) {
           go("loadout", { upgrades: newUpgrades, pack, level, score });
         } else {
-          go("quiz", { pack, questionIndex: questionIndex + 1, upgrades: newUpgrades, level, score, results: newResults, correctCount: newCorrectCount });
+          go("quiz", { pack, questionIndex: questionIndex + 1, upgrades: newUpgrades, level, score, results: newResults, correctCount: newCorrectCount, questions });
         }
       });
     });
@@ -311,7 +327,7 @@ scene("quiz", ({ pack, questionIndex, upgrades, level, score = 0, results = [], 
         if (questionIndex + 1 >= questions.length) {
           go("loadout", { upgrades, pack, level, score });
         } else {
-          go("quiz", { pack, questionIndex: questionIndex + 1, upgrades, level, score, results: timeoutResults, correctCount });
+          go("quiz", { pack, questionIndex: questionIndex + 1, upgrades, level, score, results: timeoutResults, correctCount, questions });
         }
       });
     }
