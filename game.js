@@ -856,10 +856,10 @@ scene("shooter", ({ upgrades, pack, level, score: prevScore = 0 }) => {
     }
   });
 
-  onTouchMove((touch) => {
-    if (bombBtn.hasPoint(touch.pos)) return;
-    player.pos.x = clamp(touch.pos.x, 20, width() - 20);
-    player.pos.y = clamp(touch.pos.y, 20, height() - 20);
+  onTouchMove((pos) => {
+    if (bombBtn.hasPoint(pos)) return;
+    player.pos.x = clamp(pos.x, 20, width() - 20);
+    player.pos.y = clamp(pos.y, 20, height() - 20);
   });
 });
 
