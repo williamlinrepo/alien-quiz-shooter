@@ -17,7 +17,7 @@ loadSound("correct",       "assets/audio/correct.wav");
 loadSound("wrong",         "assets/audio/wrong.wav");
 loadSound("gameover",      "assets/audio/gameover.wav");
 loadSound("music_menu",    "assets/audio/mondamusic-retro-arcade-game-music-512837.mp3");
-loadSound("music_shooter", "assets/audio/nastelbom-upbeat-507934.mp3");
+loadSound("music_shooter", "assets/audio/mondamusic-retro-arcade-game-music-512837.mp3");
 
 let currentMusic = null;
 let muted = false;
