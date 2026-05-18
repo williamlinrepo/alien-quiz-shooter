@@ -680,8 +680,14 @@ scene("shooter", ({ upgrades, pack, level, score: prevScore = 0 }) => {
     }
     if (wavesSpawned >= wavesPerLevel) {
       levelEnding = true;
-      wait(5, () => {
-        go("levelcomplete", { upgrades, pack, level, score });
+      // Wait for all spawns to land, then poll until the screen is clear
+      wait(count * 0.3 + 0.5, () => {
+        const clearCheck = loop(0.25, () => {
+          if (get("alien").length === 0) {
+            clearCheck.cancel();
+            wait(0.5, () => go("levelcomplete", { upgrades, pack, level, score }));
+          }
+        });
       });
     }
   }
