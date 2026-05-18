@@ -1064,6 +1064,12 @@ scene("boss", ({ upgrades, pack, level, score: prevScore = 0 }) => {
     }
   });
 
+  onTouchMove((pos) => {
+    if (bossBombBtn.hasPoint(pos)) return;
+    player.pos.x = clamp(pos.x, 20, width() - 20);
+    player.pos.y = clamp(pos.y, 60, height() - 20);
+  });
+
   const hudLives = add([text("", { size: 18 }), pos(10, 10), color(255, 80, 80)]);
   const hudBombs = add([text("", { size: 18 }), pos(10, 34), color(255, 220, 50)]);
   const hudScore = add([text("", { size: 18 }), pos(width() - 10, 10), anchor("right"), color(255, 255, 255)]);
