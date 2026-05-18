@@ -787,10 +787,9 @@ scene("shooter", ({ upgrades, pack, level, score: prevScore = 0 }) => {
     color(100, 80, 20),
     opacity(0.75),
     area(),
-    fixed(),
     "ui",
   ]);
-  add([text("BOMB", { size: 18 }), pos(100, height() - 80), anchor("center"), color(255,255,255), fixed(), "ui"]);
+  add([text("BOMB", { size: 18 }), pos(100, height() - 80), anchor("center"), color(255,255,255), "ui"]);
 
   bombBtn.onClick(() => {
     if (smartBombs > 0) {
@@ -983,6 +982,26 @@ scene("boss", ({ upgrades, pack, level, score: prevScore = 0 }) => {
   });
 
   onKeyPress(["shift", "x"], () => {
+    if (smartBombs > 0) {
+      smartBombs--;
+      updateHUD();
+      bossHp = Math.max(1, bossHp - 40);
+      updateBossBar();
+      addExplosion(bossBody.pos);
+    }
+  });
+
+  const bossBombBtn = add([
+    rect(90, 60, { radius: 10 }),
+    pos(100, height() - 80),
+    anchor("center"),
+    color(100, 80, 20),
+    opacity(0.75),
+    area(),
+    "ui",
+  ]);
+  add([text("BOMB", { size: 18 }), pos(100, height() - 80), anchor("center"), color(255, 255, 255), "ui"]);
+  bossBombBtn.onClick(() => {
     if (smartBombs > 0) {
       smartBombs--;
       updateHUD();
