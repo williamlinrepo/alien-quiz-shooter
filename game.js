@@ -16,7 +16,7 @@ loadSound("hit",           "assets/audio/hit.wav");
 loadSound("correct",       "assets/audio/correct.wav");
 loadSound("wrong",         "assets/audio/wrong.wav");
 loadSound("gameover",      "assets/audio/gameover.wav");
-loadSound("music_menu",    "assets/audio/nastelbom-upbeat-507934.mp3");
+loadSound("music_menu",    "assets/audio/the_mountain-8-bit-retro-522443.mp3");
 loadSound("music_shooter", "assets/audio/mondamusic-retro-arcade-game-music-512837.mp3");
 
 let currentMusic = null;
