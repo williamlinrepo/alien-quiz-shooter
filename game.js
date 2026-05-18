@@ -516,7 +516,6 @@ scene("shooter", ({ upgrades, pack, level, score: prevScore = 0 }) => {
   let scoreMultiplier = upgrades.scoreMultiplier;
   let shotsFired = 0;
   let shotsHit = 0;
-  let timeAlive = 0;
   let invincible = false;
 
   const player = add([
@@ -590,8 +589,6 @@ scene("shooter", ({ upgrades, pack, level, score: prevScore = 0 }) => {
   updateHUD();
   updateScore();
 
-  // Survival bonus
-  onUpdate(() => { timeAlive += dt(); });
   loop(10, () => {
     score += Math.round(100 * scoreMultiplier);
     updateScore();
@@ -610,7 +607,7 @@ scene("shooter", ({ upgrades, pack, level, score: prevScore = 0 }) => {
       flashSprite(player, rgb(255, 80, 80));
       if (lives <= 0) {
         const accuracy = shotsFired > 0 ? Math.floor((shotsHit / shotsFired) * 1000) : 0;
-        go("gameover", { score: score + accuracy, accuracy, timeAlive: Math.floor(timeAlive), level });
+        go("gameover", { score: score + accuracy, accuracy, level });
       }
     }
     invincible = true;
@@ -876,7 +873,6 @@ scene("boss", ({ upgrades, pack, level, score: prevScore = 0 }) => {
   let scoreMultiplier = upgrades.scoreMultiplier;
   let shotsFired = 0;
   let shotsHit = 0;
-  let timeAlive = 0;
   let invincible = false;
 
   // Which boss type (1-4) and how many times we've seen this boss
@@ -1013,7 +1009,6 @@ scene("boss", ({ upgrades, pack, level, score: prevScore = 0 }) => {
   updateHUD();
   updateScore();
 
-  onUpdate(() => { timeAlive += dt(); });
 
   function playerHit() {
     if (invincible) return;
@@ -1027,7 +1022,7 @@ scene("boss", ({ upgrades, pack, level, score: prevScore = 0 }) => {
       flashSprite(player, rgb(255, 80, 80));
       if (lives <= 0) {
         const accuracy = shotsFired > 0 ? Math.floor((shotsHit / shotsFired) * 1000) : 0;
-        go("gameover", { score: score + accuracy, accuracy, timeAlive: Math.floor(timeAlive), level });
+        go("gameover", { score: score + accuracy, accuracy, level });
       }
     }
     invincible = true;
@@ -1256,7 +1251,7 @@ scene("boss", ({ upgrades, pack, level, score: prevScore = 0 }) => {
   player._hit = playerHit;
 });
 
-scene("gameover", ({ score, accuracy, timeAlive, level = 1 }) => {
+scene("gameover", ({ score, accuracy, level = 1 }) => {
   addStarfield(1);
   play("gameover", { volume: 0.7 });
 
@@ -1268,7 +1263,7 @@ scene("gameover", ({ score, accuracy, timeAlive, level = 1 }) => {
   ]);
 
   add([
-    text(`Score: ${score}\nLevel reached: ${level}\nAccuracy bonus: ${accuracy}\nTime alive: ${timeAlive}s`, { size: 22 }),
+    text(`Score: ${score}\nLevel reached: ${level}\nAccuracy bonus: ${accuracy}`, { size: 22 }),
     pos(width() / 2, 180),
     anchor("center"),
     color(220, 220, 255),
